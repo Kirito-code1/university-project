@@ -4,7 +4,7 @@ const Title: React.FC = () => {
   return (
   
     <div className="relative w-full flex items-start pt-15">
-      <div className="ml-40">
+      <div className="ml-15">
         <h1 className="text-[70px] font-bold text-white leading-tight">
           Shaping
         </h1>
