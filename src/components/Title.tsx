@@ -1,9 +1,29 @@
+import React from 'react';
 
-const Title = () => (
-  <div className="flex flex-col">
-    <span className="text-3xl font-bold leading-none">ACADEMIC</span>
-    <span className="text-xl font-semibold text-gray-500 leading-none">University</span>
-  </div>
-);
+const Title: React.FC = () => {
+  return (
+  
+    <div className="relative w-full flex items-start pt-15">
+      <div className="ml-40">
+        <h1 className="text-[70px] font-bold text-white leading-tight">
+          Shaping
+        </h1>
+        
+        <h1 className="text-[70px] font-bold text-white leading-tight">
+          Tomorrow's
+        </h1>
+        
+        <div className="flex items-center space-x-4 leading-tight">
+          <h1 className="text-[70px] font-bold bg-gradient-to-r from-[#D4E157] to-[#66BB6A] bg-clip-text text-transparent">
+            Leaders
+          </h1>
+          <h1 className="text-[70px] font-bold text-white">
+            Today
+          </h1>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default Title;
