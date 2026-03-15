@@ -4,26 +4,29 @@ import laboratory from "../assets/labaratory.png";
 
 const AboutImages = () => {
   return (
-    <div className="flex-1 relative h-[520px] min-w-[550px]">
-
-      <div className="absolute top-10 right-12 w-[440px] h-[380px] rounded-[40px] overflow-hidden z-10">
+    <div className="relative w-full max-w-[600px] mx-auto h-[350px] md:h-[520px]">
+      
+      <div className="absolute top-[10%] right-[5%] md:right-[10%] w-[80%] md:w-[440px] h-[70%] md:h-[380px] rounded-[30px] md:rounded-[40px] overflow-hidden z-10 shadow-2xl">
         <img 
           src={mainBuilding} 
-          className="w-full h-full object-cover block" 
+          alt="Main Building"
+          className="w-full h-full object-cover" 
         />
       </div>
 
-      <div className="absolute top-0 right-0 w-[180px] h-[160px] rounded-[24px] overflow-hidden z-20">
+      <div className="absolute top-0 right-0 w-[35%] md:w-[180px] h-[25%] md:h-[160px] rounded-[16px] md:rounded-[24px] overflow-hidden z-20 border-4 border-white shadow-lg">
         <img 
           src={water} 
-          className="w-full h-full object-cover block" 
+          alt="Water"
+          className="w-full h-full object-cover" 
         />
       </div>
 
-      <div className="absolute bottom-0 left-0 w-[240px] h-[260px] rounded-[32px] overflow-hidden z-20">
+      <div className="absolute bottom-0 left-0 w-[45%] md:w-[240px] h-[45%] md:h-[260px] rounded-[24px] md:rounded-[32px] overflow-hidden z-20 border-4 border-white shadow-lg">
         <img 
           src={laboratory} 
-          className="w-full h-full object-cover block" 
+          alt="Laboratory"
+          className="w-full h-full object-cover" 
         />
       </div>
     </div>
