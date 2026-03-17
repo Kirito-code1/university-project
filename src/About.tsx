@@ -3,8 +3,8 @@ import AboutImages from "./components/AboutImages";
 
 const About = () => {
   return (
-    <section className="font-about py-24 px-20 bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-16">
+    <section id="about" className="font-about py-16 md:py-24 px-6 sm:px-8 lg:px-16 bg-white overflow-hidden">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
         <AboutText />
         <AboutImages />
       </div>

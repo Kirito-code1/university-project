@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useI18n } from "./i18n";
 import FacultyCard from "./components/FacultyCard";
 import FacultyTabs from "./components/FacultyTabs";
 
@@ -14,72 +16,91 @@ const facultiesData = [
     desc: "Cutting-edge programs in AI, cybersecurity, and software engineering.", 
     count: "12 Programs", 
     color: "bg-[#E0F7F9] text-[#00C9A7]",
-    icon: iconIT 
+    icon: iconIT,
+    categories: ["undergraduate", "graduate", "doctoral"] 
   },
   { 
     title: "Business & Management", 
     desc: "Develop strategic thinking and leadership skills for the global market.", 
     count: "9 Programs", 
     color: "bg-[#EBF5EE] text-[#A4B43B]",
-    icon: iconBusiness 
+    icon: iconBusiness,
+    categories: ["undergraduate", "graduate", "professional"] 
   },
   { 
     title: "Natural Sciences", 
     desc: "Explore physics, chemistry, and biology through research-driven learning.", 
     count: "8 Programs", 
     color: "bg-[#F0F9F6] text-[#00C9A7]",
-    icon: iconScience 
+    icon: iconScience,
+    categories: ["undergraduate", "doctoral"] 
   },
   { 
     title: "Medicine & Health", 
     desc: "Prepare for careers in healthcare with world-class clinical training.", 
     count: "7 Programs", 
     color: "bg-[#E0F7F9] text-[#00C9A7]",
-    icon: iconMedicine 
+    icon: iconMedicine,
+    categories: ["undergraduate", "professional"] 
   },
   { 
     title: "Law & Governance", 
     desc: "Master international law, human rights, and public administration.", 
     count: "6 Programs", 
     color: "bg-[#EBF5EE] text-[#A4B43B]",
-    icon: iconLaw 
+    icon: iconLaw,
+    categories: ["graduate", "professional"] 
   },
   { 
     title: "Arts & Humanities", 
     desc: "Cultivate creativity across literature, design, and cultural studies.", 
     count: "10 Programs", 
     color: "bg-[#F0F9F6] text-[#00C9A7]",
-    icon: iconArts 
+    icon: iconArts,
+    categories: ["undergraduate", "graduate"] 
   },
 ];
 
 const Faculties = () => {
+  const { t } = useI18n();
+  const tabs = [
+    { id: "undergraduate", label: t("faculties.tabs.undergraduate") },
+    { id: "graduate", label: t("faculties.tabs.graduate") },
+    { id: "doctoral", label: t("faculties.tabs.doctoral") },
+    { id: "professional", label: t("faculties.tabs.professional") },
+  ];
+  const [activeTab, setActiveTab] = useState(tabs[0].id);
+
+  const filtered = facultiesData.filter((faculty) =>
+    faculty.categories?.includes(activeTab)
+  );
+
   return (
-    <section className="py-24 px-20 bg-white font-about">
+    <section id="faculties" className="py-16 md:py-24 px-6 sm:px-8 lg:px-16 bg-white font-about">
       <div className="max-w-7xl mx-auto text-center">
         {/* Хедер блока */}
-        <h5 className="text-[#00C9A7] font-bold uppercase tracking-[0.2em] text-sm mb-4">
-          Academic Excellence
+        <h5 className="text-[#00C9A7] font-bold uppercase tracking-[0.2em] text-xs sm:text-sm mb-4">
+          {t("faculties.eyebrow")}
         </h5>
-        <h2 className="text-[48px] font-bold text-[#1D2939] mb-4">
-          Explore Our <span className="text-[#00C9A7]">Faculties</span>
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1D2939] mb-4">
+          {t("faculties.title")} <span className="text-[#00C9A7]">{t("faculties.highlight")}</span>
         </h2>
-        <p className="text-gray-500 max-w-2xl mx-auto mb-12 text-[18px]">
-          Choose from over 200 programs across diverse disciplines, each designed to prepare you for a meaningful career.
+        <p className="text-gray-500 max-w-2xl mx-auto mb-10 text-[16px] sm:text-[17px]">
+          {t("faculties.description")}
         </p>
 
-        <FacultyTabs />
+        <FacultyTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
         {/* Сетка */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {facultiesData.map((f, i) => (
+          {filtered.map((f, i) => (
             <FacultyCard key={i} {...f} />
           ))}
         </div>
 
         {/* Кнопка внизу */}
         <button className="border-2 border-[#1D2939] text-[#1D2939] px-10 py-4 rounded-xl font-bold text-[16px] hover:bg-[#1D2939] hover:text-white transition-all">
-          View All Programs →
+          {t("faculties.viewAll")}
         </button>
       </div>
     </section>

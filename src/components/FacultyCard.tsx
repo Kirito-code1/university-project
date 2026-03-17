@@ -4,6 +4,7 @@ interface FacultyProps {
   count: string;
   color: string;
   icon: string;
+  categories?: string[];
 }
 
 const FacultyCard = ({ title, desc, count, color, icon }: FacultyProps) => {

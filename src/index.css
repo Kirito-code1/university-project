@@ -1,2 +1,36 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+html {
+  scroll-behavior: smooth;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.partner-marquee {
+  display: inline-flex;
+  align-items: center;
+  gap: 32px;
+  width: max-content;
+  animation: partner-marquee 22s linear infinite;
+}
+
+.partner-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes partner-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

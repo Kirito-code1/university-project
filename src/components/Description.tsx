@@ -1,10 +1,11 @@
-const Description = () => {
-  return (
+import { useI18n } from "../i18n";
 
-    <div className="max-w-[90%] md:max-w-[450px] mt-4 ml-4 md:ml-2 lg:ml-20"> 
-      <p className="text-gray-400 text-[16px] md:text-[20px] font-medium leading-relaxed text-left">
-        A world-class education experience in the heart of Central Asia. 
-        Discover 200+ programs designed to transform your future.
+const Description = () => {
+  const { t } = useI18n();
+  return (
+    <div className="max-w-[90%] md:max-w-[520px] mt-4"> 
+      <p className="text-gray-200/90 text-[16px] md:text-[18px] font-medium leading-relaxed text-left">
+        {t("hero.description")}
       </p>
     </div>
   );

@@ -1,22 +1,26 @@
-import { useState } from "react";
+import { useI18n } from "../i18n";
 
 const Language = () => {
-  const [language, setLanguage] = useState("En");
-  const languages = ["En", "Uz", "Ru"];
+  const { language, setLanguage } = useI18n();
+  const languages = [
+    { label: "En", value: "en" },
+    { label: "Uz", value: "uz" },
+    { label: "Ru", value: "ru" },
+  ];
 
   return (
-    <div className="flex border border-white/20 rounded-full overflow-hidden w-max bg-white/5 backdrop-blur-sm ml-[80px]"> 
+    <div className="flex border border-slate-200 rounded-full overflow-hidden w-max bg-slate-50"> 
       {languages.map((lang) => (
         <button
-          key={lang}
-          onClick={() => setLanguage(lang)}
-          className={`px-3 py-1 text-[13px] font-bold transition-all ${
-            language === lang
+          key={lang.value}
+          onClick={() => setLanguage(lang.value as "en" | "ru" | "uz")}
+          className={`px-3 py-1 text-[12px] font-bold leading-none transition-all text-center min-w-[36px] whitespace-nowrap ${
+            language === lang.value
               ? "bg-[#00C9A7] text-white" 
-              : "text-gray-400 hover:text-white hover:bg-white/10"
+              : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
           }`}
         >
-          {lang}
+          {lang.label}
         </button>
       ))}
     </div>

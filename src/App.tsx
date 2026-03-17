@@ -2,19 +2,30 @@ import HeaderTitle from "./components/HeaderTitle";
 import Navigation from "./components/Navigation";
 import Language from "./components/Language";
 import ApplyButton from "./components/ApplyButton";
+import ApplyModal from "./components/ApplyModal";
 import GlassBlock from "./components/GlassBlock";
 import Title from "./components/Title";
 import Description from "./components/Description";
 import bgImage from "./assets/Container.svg";
 import NumbersPanel from "./components/NumberPanel";
-import Search from "./components/Search";
 import About from "./About";
 import Faculties from "./Faculties";
+import Research from "./Research";
+import WhyUs from "./WhyUs";
+import NewsEvents from "./NewsEvents";
+import CampusLife from "./CampusLife";
+import Community from "./Community";
+import Footer from "./Footer";
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { useI18n } from "./i18n";
 
 export default function App() {
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [showTop, setShowTop] = useState(false);
+  const { t } = useI18n();
+
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -24,50 +35,59 @@ export default function App() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowTop(window.scrollY > 400);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className="relative w-full min-h-screen bg-white overflow-x-hidden">
-      
-      <header className="relative z-30 flex items-center justify-between px-6 md:px-10 py-5 w-full bg-white shadow-sm">
-        <HeaderTitle />
-        <div className="hidden lg:flex items-center space-x-8">
-          <Navigation />
-          <div className="flex items-center space-x-4">
-             <Language />
-             <Search />
-             <ApplyButton />
+      <header className="relative z-30 w-full bg-white/90 backdrop-blur border-b border-slate-100">
+        <div className="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-5 max-w-7xl">
+          <HeaderTitle />
+          <div className="flex items-center gap-8 lg:gap-12">
+            <Navigation />
+            <div className="hidden lg:flex items-center gap-4">
+              <Language />
+              <ApplyButton onClick={() => setApplyOpen(true)} />
+            </div>
           </div>
         </div>
       </header>
 
-      <div 
-        className="relative w-full h-[calc(100vh-80px)] bg-cover bg-center bg-no-repeat"
+      <section
+        className="relative w-full min-h-[calc(100svh-80px)] bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${bgImage})` }}
       >
         <div className="absolute inset-0 bg-black/40"></div>
 
-        <main 
-          data-aos="fade-up" 
+        <main
+          data-aos="fade-up"
           data-aos-delay="200"
-          className="relative z-10 px-6 md:ml-40 pt-10 md:pt-20 flex flex-col"
+          className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 md:pt-20 pb-12 flex flex-col"
         >
-          <GlassBlock /> 
+          <GlassBlock />
           <Title />
           <Description />
-          
-          <div className="flex flex-wrap gap-4 mt-8 ml-0 md:ml-10 lg:ml-20">
-            <button className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition">
-              Explore Programs
+
+          <div className="flex flex-wrap gap-3 mt-8">
+            <button className="bg-white text-black px-7 py-3 rounded-full font-bold hover:bg-gray-200 transition">
+              {t("hero.explore")}
             </button>
-            <button className="border border-white text-white px-8 py-3 rounded-full font-bold bg-white/10 backdrop-blur-md hover:bg-white/20 transition">
-              Virtual Tour
+            <button className="border border-white text-white px-7 py-3 rounded-full font-bold bg-white/10 backdrop-blur-md hover:bg-white/20 transition">
+              {t("hero.tour")}
             </button>
           </div>
-          
+
           <div data-aos="fade-up" data-aos-delay="400" className="mt-10">
             <NumbersPanel />
           </div>
         </main>
-      </div>
+      </section>
 
       <div className="relative w-full bg-white" data-aos="fade-up">
         <About />
@@ -76,6 +96,41 @@ export default function App() {
       <div className="relative w-full bg-white" data-aos="fade-up">
         <Faculties />
       </div>
+
+      <div className="relative w-full" data-aos="fade-up">
+        <Research />
+      </div>
+
+      <div className="relative w-full" data-aos="fade-up">
+        <WhyUs />
+      </div>
+
+      <div className="relative w-full" data-aos="fade-up">
+        <NewsEvents />
+      </div>
+
+      <div className="relative w-full" data-aos="fade-up">
+        <CampusLife />
+      </div>
+
+      <div className="relative w-full" data-aos="fade-up">
+        <Community onApply={() => setApplyOpen(true)} />
+      </div>
+
+      <Footer />
+
+      <ApplyModal open={applyOpen} onClose={() => setApplyOpen(false)} />
+
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className={`fixed bottom-6 right-6 z-40 h-12 w-12 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-500/30 transition-all ${
+          showTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+        }`}
+        aria-label="Back to top"
+      >
+        ↑
+      </button>
     </div>
   );
 }
