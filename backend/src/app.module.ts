@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ApplicationsModule } from './applications/applications.module';
-import { DatabaseModule } from './database/database.module';
 import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
@@ -10,7 +9,6 @@ import { TelegramModule } from './telegram/telegram.module';
       isGlobal: true,
       envFilePath: ['.env'],
     }),
-    DatabaseModule,
     ApplicationsModule,
     TelegramModule,
   ],

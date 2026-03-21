@@ -4,8 +4,6 @@ import {
   Inject,
   forwardRef,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Application, ApplicationStatus } from './entity/application.entity';
 import { CreateApplicationDto } from './dto/application-create.dto';
 import { TelegramService } from '../telegram/telegram.service';
@@ -21,9 +19,10 @@ export class ApplicationsService {
     'Arts & Humanities',
   ];
 
+  private readonly memoryStore: Application[] = [];
+  private nextId = 1;
+
   constructor(
-    @InjectRepository(Application)
-    private readonly applicationRepository: Repository<Application>,
     @Inject(forwardRef(() => TelegramService))
     private readonly telegramService: TelegramService,
   ) {}
@@ -45,29 +44,29 @@ export class ApplicationsService {
       throw new BadRequestException('Provide at least Surname and Name');
     }
 
-    const exists = await this.applicationRepository.findOne({
-      where: { surname, name, middleName },
-    });
+    const exists = this.memoryStore.find(
+      (app) =>
+        app.surname === surname &&
+        app.name === name &&
+        app.middleName === middleName,
+    );
 
     if (exists) {
       throw new BadRequestException('Application already exists');
     }
 
-    let newApp: Application;
-    try {
-      newApp = await this.applicationRepository.save({
-        surname,
-        name,
-        middleName,
-        email: dto.email,
-        program: trimmedProgram,
-        message: dto.message,
-        status: ApplicationStatus.PENDING, // <-- правильный импорт из entity
-      });
-    } catch (err) {
-      console.error('Failed to save application:', err);
-      throw new BadRequestException('Database error');
-    }
+    const newApp: Application = {
+      id: this.nextId++,
+      surname,
+      name,
+      middleName,
+      email: dto.email,
+      program: trimmedProgram,
+      message: dto.message ?? '',
+      status: ApplicationStatus.PENDING,
+      createdAt: new Date().toISOString(),
+    };
+    this.memoryStore.push(newApp);
 
     try {
       await this.telegramService.sendNewApplication(newApp);
@@ -88,15 +87,41 @@ export class ApplicationsService {
       program: newApp.program,
       messageText: newApp.message,
       status: newApp.status,
+      createdAt: newApp.createdAt,
     };
+  }
+
+  findAll() {
+    return [...this.memoryStore].sort((a, b) => b.id - a.id);
+  }
+
+  getLast() {
+    if (this.memoryStore.length === 0) return null;
+    return this.memoryStore[this.memoryStore.length - 1] ?? null;
+  }
+
+  getStats() {
+    const total = this.memoryStore.length;
+    const pending = this.memoryStore.filter(
+      (app) => app.status === ApplicationStatus.PENDING,
+    ).length;
+    const accepted = this.memoryStore.filter(
+      (app) => app.status === ApplicationStatus.ACCEPTED,
+    ).length;
+    const rejected = this.memoryStore.filter(
+      (app) => app.status === ApplicationStatus.REJECTED,
+    ).length;
+    return { total, pending, accepted, rejected };
   }
 
   async updateStatus(id: number, status: string) {
     const appId = Number(id);
 
-    const app = await this.applicationRepository.findOne({
-      where: { id: appId },
-    });
+    if (!Object.values(ApplicationStatus).includes(status as ApplicationStatus)) {
+      throw new BadRequestException('Invalid status');
+    }
+
+    const app = this.memoryStore.find((item) => item.id === appId);
 
     if (!app) {
       throw new BadRequestException('Application not found');
@@ -104,7 +129,6 @@ export class ApplicationsService {
 
     app.status = status as ApplicationStatus;
 
-    return await this.applicationRepository.save(app, { reload: true });
+    return app;
   }
 }
-

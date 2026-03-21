@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors({ origin: true });
 
   console.log('--- CHECK ENV ---');
   console.log('TOKEN EXISTS:', !!process.env.TELEGRAM_BOT_TOKEN);

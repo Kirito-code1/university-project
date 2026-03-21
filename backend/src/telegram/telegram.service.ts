@@ -16,28 +16,70 @@ export class TelegramService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+    const token = (
+      this.configService.get<string>('TELEGRAM_BOT_TOKEN') ?? ''
+    ).trim();
+    const chatIdRaw = (
+      this.configService.get<string>('TELEGRAM_ADMIN_CHAT_ID') ?? ''
+    ).trim();
 
-    if (!token || !chatId) {
-      throw new Error(
-        'TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID is missing',
+    if (!token) {
+      throw new Error('TELEGRAM_BOT_TOKEN is missing');
+    }
+
+    const tokenId = token.split(':')[0];
+    const isValidChatId =
+      !!chatIdRaw &&
+      !chatIdRaw.includes(':') &&
+      /^-?\d+$/.test(chatIdRaw) &&
+      chatIdRaw !== tokenId;
+    if (!isValidChatId && chatIdRaw) {
+      console.warn(
+        'Invalid TELEGRAM_ADMIN_CHAT_ID. It should be a numeric chat id (not the bot id).',
       );
     }
 
-    this.adminChatId = chatId;
+    this.adminChatId = isValidChatId ? chatIdRaw : '';
     this.bot = new Telegraf(token);
 
     this.setupHandlers();
-    this.bot.launch().catch((err) => console.error(err));
+    this.bot
+      .launch()
+      .then(() => {
+        if (this.adminChatId) {
+          console.log(
+            'Telegram bot started. Admin chat id:',
+            this.adminChatId,
+          );
+        } else {
+          console.log(
+            'Telegram bot started. Admin chat id is not set. Send /start to set it.',
+          );
+        }
+      })
+      .catch((err) => console.error(err));
   }
 
   async sendNewApplication(app: Application) {
+    if (!this.adminChatId) {
+      console.error(
+        'Admin chat id is not set. Send /start to the bot and set TELEGRAM_ADMIN_CHAT_ID.',
+      );
+      return;
+    }
+
+    const createdAt = app.createdAt
+      ? new Date(app.createdAt).toLocaleString('ru-RU')
+      : '—';
+    const messageText = app.message?.trim() ? app.message.trim() : '—';
+
     const text =
       `<b>📄 Новая заявка #${app.id}</b>\n\n` +
       `👤 <b>ФИО:</b> ${app.surname} ${app.name} ${app.middleName}\n` +
       `📧 <b>Email:</b> ${app.email}\n` +
       `🎓 <b>Программа:</b> ${app.program}\n` +
+      `🕒 <b>Время:</b> ${createdAt}\n` +
+      `💬 <b>Сообщение:</b> ${messageText}\n` +
       `⏳ <b>Статус:</b> PENDING`;
 
     await this.bot.telegram.sendMessage(this.adminChatId, text, {
@@ -52,6 +94,47 @@ export class TelegramService implements OnModuleInit {
   }
 
   private setupHandlers() {
+    this.bot.start(async (ctx) => {
+      const chatId = String(ctx.chat?.id ?? ctx.from?.id ?? '');
+      if (chatId) {
+        console.log('Telegram /start chat id:', chatId);
+        if (!this.adminChatId) {
+          this.adminChatId = chatId;
+          console.log('Admin chat id set from /start:', chatId);
+        }
+      }
+      await ctx.reply(
+        `Бот активирован. Ваш chat id: ${chatId || 'unknown'}`,
+      );
+    });
+
+    this.bot.command('chatid', async (ctx) => {
+      const chatId = String(ctx.chat?.id ?? ctx.from?.id ?? '');
+      await ctx.reply(`chat id: ${chatId}`);
+    });
+
+    this.bot.command('stats', async (ctx) => {
+      const stats = this.applicationsService.getStats();
+      await ctx.reply(
+        `📊 Статистика\n\nВсего: ${stats.total}\nОжидают: ${stats.pending}\nПринято: ${stats.accepted}\nОтклонено: ${stats.rejected}`,
+      );
+    });
+
+    this.bot.command('last', async (ctx) => {
+      const last = this.applicationsService.getLast();
+      if (!last) {
+        await ctx.reply('Пока заявок нет.');
+        return;
+      }
+      const createdAt = last.createdAt
+        ? new Date(last.createdAt).toLocaleString('ru-RU')
+        : '—';
+      const messageText = last.message?.trim() ? last.message.trim() : '—';
+      await ctx.reply(
+        `Последняя заявка #${last.id}\nФИО: ${last.surname} ${last.name} ${last.middleName}\nEmail: ${last.email}\nПрограмма: ${last.program}\nВремя: ${createdAt}\nСообщение: ${messageText}\nСтатус: ${last.status}`,
+      );
+    });
+
     this.bot.action(/^upd_(ACCEPTED|REJECTED)_(\d+)$/, async (ctx) => {
       const match = ctx.match as RegExpExecArray;
       const status = match[1];
@@ -86,7 +169,7 @@ export class TelegramService implements OnModuleInit {
       } catch (error) {
         console.error('Update failed:', error);
         await ctx.reply(
-          `❌ Ошибка БД при обновлении #${appId}. Проверьте соединение.`,
+          `❌ Ошибка при обновлении заявки #${appId}. Проверьте доступ к сервису.`,
         );
       }
     });

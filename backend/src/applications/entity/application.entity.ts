@@ -30,6 +30,9 @@ export class Application {
   @Column()
   message!: string;
 
+  // In-memory mode uses ISO string timestamps.
+  createdAt?: string;
+
   @Column({
     type: 'enum',
     enum: ApplicationStatus,
