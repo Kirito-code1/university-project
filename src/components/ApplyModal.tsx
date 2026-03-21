@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { useI18n } from "../i18n";
 
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
 type ApplyModalProps = {
   open: boolean;
   onClose: () => void;
@@ -31,16 +33,24 @@ const initialState: FormState = {
   message: "",
 };
 
+const DRAFT_KEY = "applicationDraft";
+
 const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
   const { t } = useI18n();
   const [form, setForm] = useState<FormState>(initialState);
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setSubmitted(false);
-    setErrors({});
+    setTouched({});
+    setSubmitAttempted(false);
+    setSubmitError(null);
   }, [open]);
 
   useEffect(() => {
@@ -51,41 +61,121 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as FormState;
+      if (parsed && typeof parsed === "object") {
+        setForm({
+          name: parsed.name ?? "",
+          email: parsed.email ?? "",
+          program: parsed.program ?? "",
+          message: parsed.message ?? "",
+        });
+      }
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = window.setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+      setDraftSavedAt(new Date().toLocaleTimeString());
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [form, open]);
+
   const emailIsValid = useMemo(() => {
     if (!form.email) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
   }, [form.email]);
 
-  const validate = () => {
+  const liveErrors = useMemo<FormErrors>(() => {
     const nextErrors: FormErrors = {};
     if (!form.name.trim()) nextErrors.name = t("modal.errors.nameRequired");
     if (!form.email.trim()) nextErrors.email = t("modal.errors.emailRequired");
     if (form.email && !emailIsValid) nextErrors.email = t("modal.errors.emailInvalid");
     if (!form.program) nextErrors.program = t("modal.errors.programRequired");
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    const trimmedMessage = form.message.trim();
+    if (trimmedMessage && trimmedMessage.length < 10) {
+      nextErrors.message = "Сообщение должно быть не короче 10 символов";
+    }
+    return nextErrors;
+  }, [form.email, form.message, form.name, form.program, emailIsValid, t]);
+
+  const completionCount = useMemo(() => {
+    let count = 0;
+    if (form.name.trim()) count += 1;
+    if (form.email.trim() && emailIsValid) count += 1;
+    if (form.program) count += 1;
+    if (form.message.trim()) count += 1;
+    return count;
+  }, [emailIsValid, form.email, form.message, form.name, form.program]);
+
+  const completionPercent = Math.round((completionCount / 4) * 100);
+
+  const displayErrors = useMemo<FormErrors>(() => {
+    if (submitAttempted) return liveErrors;
+    const next: FormErrors = {};
+    (Object.keys(liveErrors) as (keyof FormState)[]).forEach((key) => {
+      if (touched[key]) next[key] = liveErrors[key];
+    });
+    return next;
+  }, [liveErrors, submitAttempted, touched]);
+
+  const validate = () => {
+    return Object.keys(liveErrors).length === 0;
   };
 
   const handleChange =
     (field: keyof FormState) =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       setForm((prev) => ({ ...prev, [field]: event.target.value }));
-      if (errors[field]) {
-        setErrors((prev) => ({ ...prev, [field]: undefined }));
-      }
     };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleBlur =
+    (field: keyof FormState) =>
+    () => {
+      setTouched((prev) => ({ ...prev, [field]: true }));
+    };
+
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setSubmitAttempted(true);
     if (!validate()) return;
-    const applications = JSON.parse(localStorage.getItem("applications") || "[]");
-    applications.push({
-      ...form,
-      submittedAt: new Date().toISOString(),
-    });
-    localStorage.setItem("applications", JSON.stringify(applications));
-    setSubmitted(true);
-    setForm(initialState);
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const response = await fetch(`${API_URL}/applications/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.name,
+          email: form.email,
+          program: form.program,
+          message: form.message,
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => "");
+        throw new Error(message || "Ошибка отправки заявки");
+      }
+
+      await response.json().catch(() => null);
+      setSubmitted(true);
+      setSubmitAttempted(false);
+      setForm(initialState);
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Ошибка отправки заявки");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!open) return null;
@@ -119,6 +209,17 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
             <span className="bg-white/15 px-3 py-1 rounded-full">{t("modal.chips.scholarship")}</span>
             <span className="bg-white/15 px-3 py-1 rounded-full">{t("modal.chips.free")}</span>
           </div>
+          <div className="mt-4">
+            <div className="h-1.5 w-full rounded-full bg-white/20">
+              <div
+                className="h-1.5 rounded-full bg-white transition-all"
+                style={{ width: `${completionPercent}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.25em] text-white/70">
+              заполнено {completionPercent}%
+            </p>
+          </div>
         </div>
 
         <div className="p-6 sm:p-8">
@@ -149,10 +250,12 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
                   <input
                     value={form.name}
                     onChange={handleChange("name")}
+                    onBlur={handleBlur("name")}
                     className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     placeholder={t("modal.namePlaceholder")}
                   />
-                  {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name}</p>}
+                  <p className="text-xs text-slate-400 mt-1">Минимум два слова: фамилия и имя</p>
+                  {displayErrors.name && <p className="text-xs text-rose-500 mt-1">{displayErrors.name}</p>}
                 </div>
 
                 <div>
@@ -160,10 +263,11 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
                   <input
                     value={form.email}
                     onChange={handleChange("email")}
+                    onBlur={handleBlur("email")}
                     className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     placeholder={t("modal.emailPlaceholder")}
                   />
-                  {errors.email && <p className="text-xs text-rose-500 mt-1">{errors.email}</p>}
+                  {displayErrors.email && <p className="text-xs text-rose-500 mt-1">{displayErrors.email}</p>}
                 </div>
               </div>
 
@@ -172,6 +276,7 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
                 <select
                   value={form.program}
                   onChange={handleChange("program")}
+                  onBlur={handleBlur("program")}
                   className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 >
                   <option value="">{t("modal.programPlaceholder")}</option>
@@ -181,8 +286,8 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
                     </option>
                   ))}
                 </select>
-                {errors.program && (
-                  <p className="text-xs text-rose-500 mt-1">{errors.program}</p>
+                {displayErrors.program && (
+                  <p className="text-xs text-rose-500 mt-1">{displayErrors.program}</p>
                 )}
               </div>
 
@@ -191,18 +296,28 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
                 <textarea
                   value={form.message}
                   onChange={handleChange("message")}
+                  onBlur={handleBlur("message")}
                   rows={4}
+                  maxLength={500}
                   className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                   placeholder={t("modal.messagePlaceholder")}
                 />
+                <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+                  <span>До 500 символов, необязательно</span>
+                  <span>{form.message.trim().length}/500</span>
+                </div>
+                {displayErrors.message && (
+                  <p className="text-xs text-rose-500 mt-1">{displayErrors.message}</p>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="bg-[#1D2939] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-sm hover:shadow-md transition-shadow"
+                  disabled={isSubmitting}
+                  className="bg-[#1D2939] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-sm hover:shadow-md transition-shadow disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {t("modal.submit")}
+                  {isSubmitting ? "Отправка..." : t("modal.submit")}
                 </button>
                 <button
                   type="button"
@@ -212,6 +327,12 @@ const ApplyModal = ({ open, onClose }: ApplyModalProps) => {
                   {t("modal.cancel")}
                 </button>
               </div>
+              {draftSavedAt && (
+                <p className="text-xs text-slate-400">Черновик сохранен в {draftSavedAt}</p>
+              )}
+              {submitError && (
+                <p className="text-sm text-rose-500">{submitError}</p>
+              )}
             </form>
           )}
         </div>

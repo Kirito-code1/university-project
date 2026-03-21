@@ -16,6 +16,7 @@ import NewsEvents from "./NewsEvents";
 import CampusLife from "./CampusLife";
 import Community from "./Community";
 import Footer from "./Footer";
+import AdminPanel from "./components/AdminPanel";
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { useEffect, useState } from "react";
@@ -49,10 +50,10 @@ export default function App() {
       <header className="relative z-30 w-full bg-white/90 backdrop-blur border-b border-slate-100">
         <div className="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-5 max-w-7xl">
           <HeaderTitle />
-          <div className="flex items-center gap-8 lg:gap-12">
+          <div className="flex items-center gap-4 sm:gap-6 lg:gap-10">
+            <Language />
             <Navigation />
             <div className="hidden lg:flex items-center gap-4">
-              <Language />
               <ApplyButton onClick={() => setApplyOpen(true)} />
             </div>
           </div>
@@ -120,6 +121,7 @@ export default function App() {
       <Footer />
 
       <ApplyModal open={applyOpen} onClose={() => setApplyOpen(false)} />
+      <AdminPanel />
 
       <button
         type="button"
